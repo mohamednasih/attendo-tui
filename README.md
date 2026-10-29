@@ -52,6 +52,8 @@ Then restart GNOME Shell with <kbd>Alt</kbd>+<kbd>F2</kbd>, enter `r`, and run:
 gnome-extensions enable attendo@mnasih.local
 ```
 
-The extension refreshes every 60 seconds and has a **Refresh now** action in
-its menu. It reads the Attendo cookie through the bundled Python program, so
-run `python3 attendo.py --once` first if Firefox still needs to sign in.
+The extension shows time left, today's goal, counted days, the whole-hour pace
+needed to finish, and Attendo's live estimate. It refreshes every 60 seconds
+and has a **Refresh now** action in its menu. It reads the Attendo cookie
+through the bundled Python program, so run `python3 attendo.py --once` first if
+Firefox still needs to sign in.

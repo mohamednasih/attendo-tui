@@ -413,9 +413,12 @@ def _date(value: str) -> str:
 
 
 def panel_text(snapshot: Snapshot) -> str:
+    days_counted = snapshot.current.counted_days if snapshot.current else 0
     return (
         f"⏳ {_number(snapshot.time_left)}h"
         f"  ·  🎯 {_number(snapshot.today_hours)}/{_number(snapshot.today_goal)}h"
+        f"  ·  📅 {days_counted}/7d"
+        f"  ·  ↗ {snapshot.hours_per_day}h/day"
         f"  ·  ● {snapshot.live_estimate or '—'}"
     )
 

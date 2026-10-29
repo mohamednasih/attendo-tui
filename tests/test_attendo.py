@@ -74,7 +74,7 @@ class ParseProfileTests(unittest.TestCase):
 
         self.assertEqual(
             panel_text(snapshot),
-            "⏳ 10h  ·  🎯 2/4h  ·  ● 02:09",
+            "⏳ 10h  ·  🎯 2/4h  ·  📅 4/7d  ·  ↗ 4h/day  ·  ● 02:09",
         )
 
     def test_prints_whole_hour_daily_pace(self):
