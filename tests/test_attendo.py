@@ -53,7 +53,7 @@ class ParseProfileTests(unittest.TestCase):
         self.assertEqual(snapshot.target, 30)
         self.assertEqual(snapshot.time_left, 10)
         self.assertEqual(snapshot.days_remaining, 3)
-        self.assertAlmostEqual(snapshot.today_goal, 10 / 3)
+        self.assertEqual(snapshot.today_goal, 4)
         self.assertEqual(snapshot.today_hours, 2)
         self.assertEqual(snapshot.live_estimate, "02:09")
         self.assertEqual(snapshot.current.counted_days, 4)
@@ -64,7 +64,7 @@ class ParseProfileTests(unittest.TestCase):
 
         self.assertEqual(
             panel_text(snapshot),
-            "⏳ 10h  ·  🎯 2/3.3h  ·  ● 02:09",
+            "⏳ 10h  ·  🎯 2/4h  ·  ● 02:09",
         )
 
     def test_seven_counted_days_closes_period(self):
@@ -74,7 +74,7 @@ class ParseProfileTests(unittest.TestCase):
         self.assertEqual(snapshot.recorded, 2)
         self.assertEqual(snapshot.time_left, 28)
         self.assertEqual(snapshot.days_remaining, 7)
-        self.assertEqual(snapshot.today_goal, 4)
+        self.assertAlmostEqual(snapshot.today_goal, 30 / 7)
         self.assertEqual(snapshot.previous.total, 21)
 
     def test_reads_only_attendo_token_from_firefox(self):

@@ -79,7 +79,10 @@ class Snapshot:
 
     @property
     def today_goal(self) -> float:
-        return self.time_left / self.days_remaining
+        # Today's saved hours reduce the live balance, but they must not move
+        # the goalposts for the day currently in progress.
+        time_left_before_today = max(0.0, self.target - self.recorded + self.today_hours)
+        return time_left_before_today / self.days_remaining
 
 
 class _ScriptCollector(HTMLParser):
