@@ -35,3 +35,22 @@ You can alternatively provide a complete cookie header through `ATTENDO_COOKIE`.
 ```sh
 python3 -m unittest discover -v
 ```
+
+## GNOME Shell panel extension
+
+GNOME Shell 42 users can put the same live summary in the top bar. Install the
+extension with:
+
+```sh
+./install-gnome-extension.sh
+```
+
+Then restart GNOME Shell with <kbd>Alt</kbd>+<kbd>F2</kbd>, enter `r`, and run:
+
+```sh
+gnome-extensions enable attendo@mnasih.local
+```
+
+The extension refreshes every 60 seconds and has a **Refresh now** action in
+its menu. It reads the Attendo cookie through the bundled Python program, so
+run `python3 attendo.py --once` first if Firefox still needs to sign in.
