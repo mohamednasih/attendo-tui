@@ -10,6 +10,9 @@ from subprocess import CompletedProcess
 from unittest.mock import patch
 
 from attendo import (
+    Day,
+    Period,
+    Snapshot,
     _firefox_command,
     _firefox_roots,
     firefox_student_token,
@@ -20,7 +23,7 @@ from attendo import (
 )
 
 
-def profile_html(last_days: int = 4) -> str:
+def profile_html(last_days: int = 4, live_estimate: str | None = "02:09") -> str:
     days = [
         {"date": f"2026-10-{25 + index:02d}", "hours": [0, 0, 11, 7][index] if index < 4 else 1, "counted": True}
         for index in range(last_days)
@@ -45,7 +48,7 @@ def profile_html(last_days: int = 4) -> str:
             },
         ],
         "todayHours": 2,
-        "todayHoursEstimation": "02:09",
+        "todayHoursEstimation": live_estimate,
     }
     rsc = "1:" + json.dumps(data, separators=(",", ":"))
     payload = json.dumps([1, rsc])
@@ -67,6 +70,10 @@ class ParseProfileTests(unittest.TestCase):
         self.assertEqual(snapshot.hours_per_day, 4)
         self.assertEqual(snapshot.today_hours, 2)
         self.assertEqual(snapshot.live_estimate, "02:09")
+        self.assertEqual(snapshot.live_estimate_hours, 2)
+        self.assertEqual(snapshot.estimated_today_hours, 2)
+        self.assertEqual(snapshot.estimated_recorded, 20)
+        self.assertEqual(snapshot.estimated_time_left, 10)
         self.assertEqual(snapshot.current.counted_days, 4)
         self.assertEqual(snapshot.previous.total, 30)
 
@@ -75,15 +82,15 @@ class ParseProfileTests(unittest.TestCase):
 
         self.assertEqual(
             panel_text(snapshot),
-            "⏳ 10h",
+            "⏳ 10(10)h",
         )
         self.assertEqual(
             panel_data(snapshot),
             {
-                "time_left": "10h",
-                "today_goal": "2 / 4h",
+                "time_left": "10(10)h",
+                "today_goal": "2(2) / 4h",
                 "days_counted": "4 / 7",
-                "pace": "4h/day",
+                "pace": "4(4)h/day",
                 "live_estimate": "02:09",
             },
         )
@@ -94,7 +101,43 @@ class ParseProfileTests(unittest.TestCase):
         with redirect_stdout(output):
             print_snapshot(parse_profile(profile_html()))
 
-        self.assertIn("Pace to finish:  4h/day", output.getvalue())
+        self.assertIn("Pace to finish:  4(4)h/day", output.getvalue())
+        self.assertIn("Time left:       10(10)h", output.getvalue())
+        self.assertIn("Today's goal:    2(2)h / 4h", output.getvalue())
+
+    def test_live_projection_matches_saved_six_estimated_eight_example(self):
+        current = Period(
+            start="2026-10-25",
+            end="2026-10-28",
+            total=18,
+            days=tuple(Day(f"2026-10-{25 + day:02d}", 0, True) for day in range(4)),
+        )
+        snapshot = Snapshot(
+            login="mnasih",
+            campus="Rabat",
+            target=30,
+            current=current,
+            previous=None,
+            today_hours=6,
+            live_estimate="08:00",
+            fetched_at=datetime(2026, 10, 29, tzinfo=timezone.utc),
+        )
+
+        self.assertEqual(snapshot.today_goal, 4)
+        self.assertEqual(panel_data(snapshot)["time_left"], "6(4)h")
+        self.assertEqual(panel_data(snapshot)["today_goal"], "6(8) / 4h")
+
+    def test_live_estimate_rounds_minutes_to_nearest_whole_hour(self):
+        snapshot = parse_profile(profile_html(live_estimate="07:35"))
+
+        self.assertEqual(snapshot.live_estimate_hours, 8)
+
+    def test_omits_parentheses_without_a_live_estimate(self):
+        snapshot = parse_profile(profile_html(live_estimate=None))
+
+        self.assertIsNone(snapshot.estimated_today_hours)
+        self.assertEqual(panel_text(snapshot), "⏳ 10h")
+        self.assertEqual(panel_data(snapshot)["today_goal"], "2 / 4h")
 
     def test_seven_counted_days_closes_period(self):
         snapshot = parse_profile(profile_html(last_days=7))

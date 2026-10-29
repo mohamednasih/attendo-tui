@@ -7,7 +7,9 @@ A dependency-free terminal dashboard for the 1337 Attendo student profile. It di
 - the whole-hour daily pace needed to finish the remaining time;
 - hours recorded in the current period, including today's saved time;
 - today's saved hours; and
-- Attendo's live `HH:MM` estimate.
+- Attendo's live `HH:MM` estimate. Values affected by that estimate show the
+  saved value first and the live value in parentheses (for example,
+  `6(4)h` left and `6(8)h / 4h` for today's recorded/live hours and goal).
 
 ## Run
 

@@ -75,6 +75,38 @@ class Snapshot:
         return max(0.0, self.target - self.recorded)
 
     @property
+    def live_estimate_hours(self) -> float | None:
+        """Attendo's projected total for today, rounded to a whole hour."""
+        if not self.live_estimate:
+            return None
+        try:
+            hours, minutes = (int(part) for part in self.live_estimate.split(":"))
+        except (TypeError, ValueError):
+            return None
+        if hours < 0 or not 0 <= minutes < 60:
+            return None
+        return float(hours + (minutes >= 30))
+
+    @property
+    def estimated_today_hours(self) -> float | None:
+        if self.live_estimate_hours is None:
+            return None
+        return self.live_estimate_hours
+
+    @property
+    def estimated_recorded(self) -> float | None:
+        if self.estimated_today_hours is None:
+            return None
+        current_total = self.current.total if self.current else 0.0
+        return current_total + self.estimated_today_hours
+
+    @property
+    def estimated_time_left(self) -> float | None:
+        if self.estimated_recorded is None:
+            return None
+        return max(0.0, self.target - self.estimated_recorded)
+
+    @property
     def days_remaining(self) -> int:
         return max(1, 7 - self.current.counted_days) if self.current else 7
 
@@ -89,6 +121,12 @@ class Snapshot:
     def hours_per_day(self) -> int:
         """Whole hours needed per remaining day to clear the live balance."""
         return math.ceil(self.time_left / self.days_remaining)
+
+    @property
+    def estimated_hours_per_day(self) -> int | None:
+        if self.estimated_time_left is None:
+            return None
+        return math.ceil(self.estimated_time_left / self.days_remaining)
 
 
 class _ScriptCollector(HTMLParser):
@@ -412,13 +450,27 @@ def _date(value: str) -> str:
         return value
 
 
+def _with_estimate(
+    value: float | int, estimate: float | int | None, suffix: str = ""
+) -> str:
+    text = _number(float(value))
+    if estimate is not None:
+        text += f"({_number(float(estimate))})"
+    return text + suffix
+
+
 def panel_data(snapshot: Snapshot) -> dict[str, str]:
     days_counted = snapshot.current.counted_days if snapshot.current else 0
     return {
-        "time_left": f"{_number(snapshot.time_left)}h",
-        "today_goal": f"{_number(snapshot.today_hours)} / {_number(snapshot.today_goal)}h",
+        "time_left": _with_estimate(snapshot.time_left, snapshot.estimated_time_left, "h"),
+        "today_goal": (
+            f"{_with_estimate(snapshot.today_hours, snapshot.estimated_today_hours)}"
+            f" / {_number(snapshot.today_goal)}h"
+        ),
         "days_counted": f"{days_counted} / 7",
-        "pace": f"{snapshot.hours_per_day}h/day",
+        "pace": _with_estimate(
+            snapshot.hours_per_day, snapshot.estimated_hours_per_day, "h/day"
+        ),
         "live_estimate": snapshot.live_estimate or "—",
     }
 
@@ -432,14 +484,29 @@ def print_snapshot(snapshot: Snapshot) -> None:
     if snapshot.current:
         period = f"{_date(snapshot.current.start)} – {_date(snapshot.current.end)}"
     print(f"@{snapshot.login} · {snapshot.campus} · {period}")
-    print(f"Time left:       {_number(snapshot.time_left)}h")
     print(
-        f"Today's goal:    {_number(snapshot.today_hours)}h / {_number(snapshot.today_goal)}h"
+        f"Time left:       "
+        f"{_with_estimate(snapshot.time_left, snapshot.estimated_time_left, 'h')}"
+    )
+    print(
+        f"Today's goal:    "
+        f"{_with_estimate(snapshot.today_hours, snapshot.estimated_today_hours, 'h')}"
+        f" / {_number(snapshot.today_goal)}h"
         f" ({snapshot.days_remaining} days remaining)"
     )
-    print(f"Hours recorded:  {_number(snapshot.recorded)}h / {_number(snapshot.target)}h")
-    print(f"Today recorded:  {_number(snapshot.today_hours)}h")
-    print(f"Pace to finish:  {snapshot.hours_per_day}h/day")
+    print(
+        f"Hours recorded:  "
+        f"{_with_estimate(snapshot.recorded, snapshot.estimated_recorded, 'h')}"
+        f" / {_number(snapshot.target)}h"
+    )
+    print(
+        f"Today recorded:  "
+        f"{_with_estimate(snapshot.today_hours, snapshot.estimated_today_hours, 'h')}"
+    )
+    print(
+        f"Pace to finish:  "
+        f"{_with_estimate(snapshot.hours_per_day, snapshot.estimated_hours_per_day, 'h/day')}"
+    )
     print(f"Live estimate:   {snapshot.live_estimate or 'unavailable'}")
 
 
@@ -483,21 +550,46 @@ def _draw(window: curses.window, snapshot: Snapshot | None, status: str) -> None
     identity = f"@{snapshot.login}  ·  {snapshot.campus}"
     _put(window, 3, 2, identity, curses.A_BOLD)
     if snapshot.current:
+        pace = _with_estimate(
+            snapshot.hours_per_day, snapshot.estimated_hours_per_day, "h/day"
+        )
         period_note = (
             f"{_date(snapshot.current.start)} – {_date(snapshot.current.end)}"
             f"  ·  {snapshot.current.counted_days}/7 days counted"
-            f"  ·  {snapshot.hours_per_day}h/day to finish"
+            f"  ·  {pace} to finish"
         )
     else:
+        pace = _with_estimate(
+            snapshot.hours_per_day, snapshot.estimated_hours_per_day, "h/day"
+        )
         period_note = (
             "Last period complete · next period starts with a recorded day"
-            f" · {snapshot.hours_per_day}h/day to finish"
+            f" · {pace} to finish"
         )
     _put(window, 4, 2, period_note, curses.color_pair(4))
     card_w = max(24, min(34, (width - 8) // 2))
     if width >= 58:
-        _box(window, 6, 2, 7, card_w, "Time left", f"{_number(snapshot.time_left)} hours", "to reach the campus target")
-        _box(window, 6, 4 + card_w, 7, card_w, "Current period", f"{_number(snapshot.recorded)} / {_number(snapshot.target)} h", "hours recorded")
+        _box(
+            window,
+            6,
+            2,
+            7,
+            card_w,
+            "Time left",
+            _with_estimate(snapshot.time_left, snapshot.estimated_time_left, " hours"),
+            "to reach the campus target",
+        )
+        _box(
+            window,
+            6,
+            4 + card_w,
+            7,
+            card_w,
+            "Current period",
+            f"{_with_estimate(snapshot.recorded, snapshot.estimated_recorded)}"
+            f" / {_number(snapshot.target)} h",
+            "hours recorded",
+        )
         _box(
             window,
             14,
@@ -505,7 +597,8 @@ def _draw(window: curses.window, snapshot: Snapshot | None, status: str) -> None
             7,
             card_w,
             "Today's goal",
-            f"{_number(snapshot.today_hours)} / {_number(snapshot.today_goal)} h",
+            f"{_with_estimate(snapshot.today_hours, snapshot.estimated_today_hours)}"
+            f" / {_number(snapshot.today_goal)} h",
             f"recorded / target · {snapshot.days_remaining}d remain",
         )
         _box(window, 14, 4 + card_w, 7, card_w, "Live estimate", snapshot.live_estimate or "—", "reported by Attendo")
@@ -513,11 +606,21 @@ def _draw(window: curses.window, snapshot: Snapshot | None, status: str) -> None
     else:
         card_w = max(12, width - 4)
         cards = (
-            ("Time left", f"{_number(snapshot.time_left)} hours", "to reach target"),
-            ("Current period", f"{_number(snapshot.recorded)} / {_number(snapshot.target)} h", "hours recorded"),
+            (
+                "Time left",
+                _with_estimate(snapshot.time_left, snapshot.estimated_time_left, " hours"),
+                "to reach target",
+            ),
+            (
+                "Current period",
+                f"{_with_estimate(snapshot.recorded, snapshot.estimated_recorded)}"
+                f" / {_number(snapshot.target)} h",
+                "hours recorded",
+            ),
             (
                 "Today's goal",
-                f"{_number(snapshot.today_hours)} / {_number(snapshot.today_goal)} h",
+                f"{_with_estimate(snapshot.today_hours, snapshot.estimated_today_hours)}"
+                f" / {_number(snapshot.today_goal)} h",
                 f"recorded / target · {snapshot.days_remaining}d remain",
             ),
             ("Live estimate", snapshot.live_estimate or "—", "reported by Attendo"),
