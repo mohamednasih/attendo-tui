@@ -52,8 +52,9 @@ Then restart GNOME Shell with <kbd>Alt</kbd>+<kbd>F2</kbd>, enter `r`, and run:
 gnome-extensions enable attendo@mnasih.local
 ```
 
-The extension shows time left, today's goal, counted days, the whole-hour pace
-needed to finish, and Attendo's live estimate. It refreshes every 60 seconds
-and has a **Refresh now** action in its menu. It reads the Attendo cookie
-through the bundled Python program, so run `python3 attendo.py --once` first if
-Firefox still needs to sign in.
+The extension keeps the top bar compact by showing only time left. Click it to
+see today's goal, counted days, the whole-hour pace needed to finish, and
+Attendo's live estimate. Opening the menu refreshes the values; the menu also
+has a **Refresh now** action. In the background, it refreshes once every 30
+hours. It reads the Attendo cookie through the bundled Python program, so run
+`python3 attendo.py --once` first if Firefox still needs to sign in.

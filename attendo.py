@@ -412,15 +412,19 @@ def _date(value: str) -> str:
         return value
 
 
-def panel_text(snapshot: Snapshot) -> str:
+def panel_data(snapshot: Snapshot) -> dict[str, str]:
     days_counted = snapshot.current.counted_days if snapshot.current else 0
-    return (
-        f"⏳ {_number(snapshot.time_left)}h"
-        f"  ·  🎯 {_number(snapshot.today_hours)}/{_number(snapshot.today_goal)}h"
-        f"  ·  📅 {days_counted}/7d"
-        f"  ·  ↗ {snapshot.hours_per_day}h/day"
-        f"  ·  ● {snapshot.live_estimate or '—'}"
-    )
+    return {
+        "time_left": f"{_number(snapshot.time_left)}h",
+        "today_goal": f"{_number(snapshot.today_hours)} / {_number(snapshot.today_goal)}h",
+        "days_counted": f"{days_counted} / 7",
+        "pace": f"{snapshot.hours_per_day}h/day",
+        "live_estimate": snapshot.live_estimate or "—",
+    }
+
+
+def panel_text(snapshot: Snapshot) -> str:
+    return f"⏳ {panel_data(snapshot)['time_left']}"
 
 
 def print_snapshot(snapshot: Snapshot) -> None:
@@ -590,7 +594,7 @@ def main(argv: list[str] | None = None) -> int:
                 else fetch_profile(args.url)
             )
             if args.panel:
-                print(panel_text(snapshot))
+                print(json.dumps(panel_data(snapshot), separators=(",", ":")))
             else:
                 print_snapshot(snapshot)
         else:

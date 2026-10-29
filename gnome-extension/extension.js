@@ -6,7 +6,7 @@ const ExtensionUtils = imports.misc.extensionUtils;
 
 const Me = ExtensionUtils.getCurrentExtension();
 const SCRIPT = GLib.build_filenamev([Me.path, 'attendo.py']);
-const REFRESH_SECONDS = 60;
+const REFRESH_SECONDS = 30 * 60 * 60;
 
 let indicator = null;
 
@@ -26,9 +26,20 @@ class AttendoIndicator extends PanelMenu.Button {
         });
         this.menu.addMenuItem(this._statusItem);
 
+        this._todayItem = this._addDetailItem("Today's goal");
+        this._daysItem = this._addDetailItem('Days counted');
+        this._paceItem = this._addDetailItem('Pace to finish');
+        this._estimateItem = this._addDetailItem('Live estimate');
+
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
         const refreshItem = new PopupMenu.PopupMenuItem('Refresh now');
         refreshItem.connect('activate', () => this._refresh());
         this.menu.addMenuItem(refreshItem);
+        this.menu.connect('open-state-changed', (_menu, isOpen) => {
+            if (isOpen)
+                this._refresh();
+        });
 
         this._process = null;
         this._cancellable = new Gio.Cancellable();
@@ -42,6 +53,14 @@ class AttendoIndicator extends PanelMenu.Button {
                 return GLib.SOURCE_CONTINUE;
             }
         );
+    }
+
+    _addDetailItem(label) {
+        const item = new PopupMenu.PopupMenuItem(`${label}: —`, {
+            reactive: false,
+        });
+        this.menu.addMenuItem(item);
+        return item;
     }
 
     _refresh() {
@@ -68,8 +87,12 @@ class AttendoIndicator extends PanelMenu.Button {
                 if (this._destroyed)
                     return;
                 if (source.get_successful()) {
-                    const text = stdout.trim();
-                    this._label.set_text(text || 'Attendo —');
+                    const data = JSON.parse(stdout);
+                    this._label.set_text(`⏳ ${data.time_left}`);
+                    this._todayItem.label.set_text(`Today's goal: ${data.today_goal}`);
+                    this._daysItem.label.set_text(`Days counted: ${data.days_counted}`);
+                    this._paceItem.label.set_text(`Pace to finish: ${data.pace}`);
+                    this._estimateItem.label.set_text(`Live estimate: ${data.live_estimate}`);
                     const updated = new Date().toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',

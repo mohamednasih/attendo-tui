@@ -13,6 +13,7 @@ from attendo import (
     _firefox_command,
     _firefox_roots,
     firefox_student_token,
+    panel_data,
     panel_text,
     parse_profile,
     print_snapshot,
@@ -74,7 +75,17 @@ class ParseProfileTests(unittest.TestCase):
 
         self.assertEqual(
             panel_text(snapshot),
-            "⏳ 10h  ·  🎯 2/4h  ·  📅 4/7d  ·  ↗ 4h/day  ·  ● 02:09",
+            "⏳ 10h",
+        )
+        self.assertEqual(
+            panel_data(snapshot),
+            {
+                "time_left": "10h",
+                "today_goal": "2 / 4h",
+                "days_counted": "4 / 7",
+                "pace": "4h/day",
+                "live_estimate": "02:09",
+            },
         )
 
     def test_prints_whole_hour_daily_pace(self):

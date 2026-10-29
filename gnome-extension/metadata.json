@@ -1,7 +1,7 @@
 {
   "uuid": "attendo@mnasih.local",
   "name": "Attendo Panel",
-  "description": "Shows Attendo time left, today's goal, and live estimate in the GNOME top bar.",
+  "description": "Shows Attendo time left in the GNOME top bar with attendance details in its menu.",
   "shell-version": ["42"],
-  "version": 1
+  "version": 2
 }
