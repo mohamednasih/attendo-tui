@@ -64,7 +64,10 @@ class Snapshot:
 
     @property
     def recorded(self) -> float:
-        return self.current.total if self.current else 0.0
+        # Attendo reports today's saved time separately from the completed
+        # daily totals in the current period.
+        current_total = self.current.total if self.current else 0.0
+        return current_total + self.today_hours
 
     @property
     def time_left(self) -> float:
