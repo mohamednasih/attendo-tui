@@ -3,7 +3,8 @@
 A dependency-free terminal dashboard for the 1337 Attendo student profile. It displays:
 
 - time left to reach the current campus target;
-- today's goal, calculated as time left divided by remaining period days;
+- today's goal, calculated before today's saved hours are deducted;
+- the whole-hour daily pace needed to finish the remaining time;
 - hours recorded in the current period, including today's saved time;
 - today's saved hours; and
 - Attendo's live `HH:MM` estimate.

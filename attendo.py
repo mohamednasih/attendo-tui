@@ -7,6 +7,7 @@ import argparse
 import configparser
 import curses
 import json
+import math
 import os
 import re
 import shutil
@@ -83,6 +84,11 @@ class Snapshot:
         # the goalposts for the day currently in progress.
         time_left_before_today = max(0.0, self.target - self.recorded + self.today_hours)
         return time_left_before_today / self.days_remaining
+
+    @property
+    def hours_per_day(self) -> int:
+        """Whole hours needed per remaining day to clear the live balance."""
+        return math.ceil(self.time_left / self.days_remaining)
 
 
 class _ScriptCollector(HTMLParser):
@@ -426,6 +432,7 @@ def print_snapshot(snapshot: Snapshot) -> None:
     )
     print(f"Hours recorded:  {_number(snapshot.recorded)}h / {_number(snapshot.target)}h")
     print(f"Today recorded:  {_number(snapshot.today_hours)}h")
+    print(f"Pace to finish:  {snapshot.hours_per_day}h/day")
     print(f"Live estimate:   {snapshot.live_estimate or 'unavailable'}")
 
 
@@ -472,9 +479,13 @@ def _draw(window: curses.window, snapshot: Snapshot | None, status: str) -> None
         period_note = (
             f"{_date(snapshot.current.start)} – {_date(snapshot.current.end)}"
             f"  ·  {snapshot.current.counted_days}/7 days counted"
+            f"  ·  {snapshot.hours_per_day}h/day to finish"
         )
     else:
-        period_note = "Last period complete · next period starts with a recorded day"
+        period_note = (
+            "Last period complete · next period starts with a recorded day"
+            f" · {snapshot.hours_per_day}h/day to finish"
+        )
     _put(window, 4, 2, period_note, curses.color_pair(4))
     card_w = max(24, min(34, (width - 8) // 2))
     if width >= 58:

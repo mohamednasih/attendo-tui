@@ -2,12 +2,21 @@ import json
 import sqlite3
 import tempfile
 import unittest
+from contextlib import redirect_stdout
 from datetime import datetime, timezone
+from io import StringIO
 from pathlib import Path
 from subprocess import CompletedProcess
 from unittest.mock import patch
 
-from attendo import _firefox_command, _firefox_roots, firefox_student_token, panel_text, parse_profile
+from attendo import (
+    _firefox_command,
+    _firefox_roots,
+    firefox_student_token,
+    panel_text,
+    parse_profile,
+    print_snapshot,
+)
 
 
 def profile_html(last_days: int = 4) -> str:
@@ -54,6 +63,7 @@ class ParseProfileTests(unittest.TestCase):
         self.assertEqual(snapshot.time_left, 10)
         self.assertEqual(snapshot.days_remaining, 3)
         self.assertEqual(snapshot.today_goal, 4)
+        self.assertEqual(snapshot.hours_per_day, 4)
         self.assertEqual(snapshot.today_hours, 2)
         self.assertEqual(snapshot.live_estimate, "02:09")
         self.assertEqual(snapshot.current.counted_days, 4)
@@ -66,6 +76,14 @@ class ParseProfileTests(unittest.TestCase):
             panel_text(snapshot),
             "⏳ 10h  ·  🎯 2/4h  ·  ● 02:09",
         )
+
+    def test_prints_whole_hour_daily_pace(self):
+        output = StringIO()
+
+        with redirect_stdout(output):
+            print_snapshot(parse_profile(profile_html()))
+
+        self.assertIn("Pace to finish:  4h/day", output.getvalue())
 
     def test_seven_counted_days_closes_period(self):
         snapshot = parse_profile(profile_html(last_days=7))
